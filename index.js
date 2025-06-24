@@ -10,6 +10,9 @@ import productRouter from './routes/productRouter.js';
 import productModel from './models/product.js';
 import verfyJwt from './middleware/auth.js';
 import oderRouter from './routes/oderRouter.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 
 
@@ -17,7 +20,7 @@ import oderRouter from './routes/oderRouter.js';
 let app = express();
 
 // Connect to MongoDB
-mongoose.connect('mongodb+srv://disna:Disna@cluster0.t7w14wb.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0').then(() => {
+mongoose.connect(process.env.MONGO_URL).then(() => {
     console.log('Connected to MongoDB successfully');
 }).catch((err) => {
     console.error('Error connecting to MongoDB:', err);

@@ -1,5 +1,5 @@
 import express from 'express';
-import productModel from '../models/product.js';
+import productModel from '../models/product.js'; 
 
 
 export async function CreateProduct(req, res) {
@@ -8,7 +8,7 @@ export async function CreateProduct(req, res) {
         return;
     }
     if (req.user.rol !== 'admin') {
-        res.status(403).json({ message: "You are not authorized to create a product" });
+        res.status(403).json({ message: "Yo u  are not authorized to create a product" });
         return;
     }
 
