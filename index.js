@@ -11,8 +11,12 @@ import productModel from './models/product.js';
 import verfyJwt from './middleware/auth.js';
 import oderRouter from './routes/oderRouter.js';
 import dotenv from 'dotenv';
+import cors from 'cors';
 
 dotenv.config();
+
+
+
 
 
 
@@ -30,6 +34,10 @@ mongoose.connect(process.env.MONGO_URL).then(() => {
 app.use(bodyParser.json());
 app.use(verfyJwt);
 
+app.use(cors({
+   // origin: 'http://localhost:5000'
+   origin: '*'
+}));
 
 
 
