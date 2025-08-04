@@ -6,7 +6,7 @@ export default function verfyJwt(req, res, next) {
     const header = req.header("authorization");
     if (header) {
         const token = header.replace('Bearer ', '');
-        jwt.verify(token, prosses.env.JWT_SECRET, (err, decoded) => {
+        jwt.verify(token, process.env.JWT_KEY, (err, decoded) => {
             if (err) {
                 console.error('JWT error:', err.message);
             } else {
@@ -18,4 +18,5 @@ export default function verfyJwt(req, res, next) {
     } else {
         next();
     }
+    
 }

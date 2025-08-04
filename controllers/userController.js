@@ -1,6 +1,9 @@
 import user from "../models/user.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export function saveUser(req, res) {
 
@@ -52,7 +55,13 @@ export function loginUser(req, res) {
                     message: "User not found"
                 });
             } else {
-                // Check password
+
+                //waradi pw dun wita block kirima
+                // Check  for user.isDisabled
+                //check if user is disabled
+                //if invalid attesmts > 3, user.blockuntil >date.now()
+                // if user.isDisabled is true, return 403 
+                
                 const isPasswordValid = bcrypt.compareSync(password, user.password);
                 if (isPasswordValid) {
                     const userData = {
@@ -65,7 +74,7 @@ export function loginUser(req, res) {
                         isMailVerified: user.isMailVerified
                     };
 
-                    const token = jwt.sign(userData, "disna12345")
+                    const token = jwt.sign(userData, process.env.JWT_KEY);
 
                     res.json({
                         message: "Login successful",
@@ -76,6 +85,11 @@ export function loginUser(req, res) {
                     res.status(401).json({
                         message: "Invalid password"
                     });
+
+                    //use -> block until = Date.now() + 5 * 60 * 1000;
+                    //user.invalidAttempts += 1;
+                    //if (user.invalidAttempts >= 3) {
+                    // user.isDisabled = true;
                 }
             }
         }
