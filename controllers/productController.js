@@ -48,7 +48,15 @@ export function getProduct(req, res) {
         });
 }
 
-
+export async function getProductById(req, res) {
+    const productid = req.params.id;
+    const product = await productModel.findOne({ productid: productid });
+    if(product == null) {
+        res.status(404).json({ message: "Product not found" });
+        return;
+    }
+    res.json(product );
+}
 
 export function deleteProduct(req, res) {
     if (req.user == null) {
@@ -63,6 +71,7 @@ export function deleteProduct(req, res) {
         () => {
             res.json({
                 message: "Product deleted successfully"
+                
             });
         }
     ).catch((err) => {
