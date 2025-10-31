@@ -9,9 +9,15 @@ import jwt from 'jsonwebtoken';
 import productRouter from './routes/productRouter.js';
 import productModel from './models/product.js';
 import verfyJwt from './middleware/auth.js';
-import oderRouter from './routes/oderRouter.js';
+
 import dotenv from 'dotenv';
 import cors from 'cors';
+
+import orderRouter from './routes/orderRouter.js';
+import orderModel from './models/order.js';
+
+
+
 
 dotenv.config();
 
@@ -40,12 +46,16 @@ app.use(cors({
 }));
 
 
+// <- This is fine if you keep spelling "oder"
+
 
 app.use('/api/user', userRouter);
 
 app.use('/api/product', productRouter);
 
-app.use('/api/oder', oderRouter);
+app.use("/api/order", orderRouter);
+
+
 
 
 // Start the server
