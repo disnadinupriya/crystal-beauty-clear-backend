@@ -33,9 +33,11 @@ export async function createOrder(req, res) {
   }
 
   for (let i = 0; i < body.billItems.length; i++) {
-      const product = await productModel.findOne({ productid: body.billItems[i].productId });
+      // support both `productid` and `productId` from client payload
+      const requestedProductId = body.billItems[i].productid ?? body.billItems[i].productId;
+      const product = await productModel.findOne({ productid: requestedProductId });
       if(product == null) {
-        res.status(404).json({ message: "Product with id " + body.billItems[i].productId + " not found" });
+        res.status(404).json({ message: "Product with id " + requestedProductId + " not found" });
         return;
       }
       /* productid: String,
@@ -43,14 +45,26 @@ export async function createOrder(req, res) {
         Image: String,
         quantity: Number,
         price: Number*/
+      // safely extract first image even if Image is nested arrays
+      let firstImage;
+      if (Array.isArray(product.Image)) {
+        if (Array.isArray(product.Image[0])) {
+          firstImage = product.Image[0][0];
+        } else {
+          firstImage = product.Image[0];
+        }
+      } else {
+        firstImage = product.Image;
+      }
+
       orderData.billItems[i] = {
-            productId:product.productid,
-            ProductName:product.name,
-            Image:product.Image,
-            quantity:body.billItems[i].quantity,
-            price:product.price
+            productId: product.productid,
+            ProductName: product.name,
+            Image: firstImage,
+            quantity: body.billItems[i].quantity,
+            price: product.price
       };
-      orderData.total=orderData.total + product.price * body.billItems[i].quantity;
+      orderData.total = orderData.total + product.price * body.billItems[i].quantity;
   }
   const order = new orderModel(orderData);
   
