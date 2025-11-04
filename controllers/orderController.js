@@ -120,3 +120,33 @@ export function getOrders(req, res) {
     })
   }
 }
+
+// updateOrder handler (server-side)
+export async function updateOrder(req, res) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "You need to login first" });
+    }
+    if (req.user.rol !== "admin") {
+      return res.status(403).json({ message: "You are not authorized to update an order" });
+    }
+
+    const orderId = req.params.orderId; // e.g. "ORD0001"
+    // update by orderId field (not _id)
+    const updatedOrder = await orderModel.findOneAndUpdate(
+      { orderId: orderId },
+      req.body,
+      { new: true } // return the updated document
+    );
+
+    if (!updatedOrder) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    return res.json({ message: "Order updated successfully", order: updatedOrder });
+  } catch (error) {
+    console.error("Error updating order:", error); // server log with stack trace
+    // Send some error detail for debugging, but avoid leaking sensitive internals in production
+    return res.status(500).json({ message: "Error updating order", error: error.message });
+  }
+}

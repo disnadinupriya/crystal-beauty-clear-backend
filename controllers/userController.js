@@ -2,6 +2,8 @@ import user from "../models/user.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import axios from "axios";
+import userModel from "../models/user.js";
 
 dotenv.config();
 
@@ -100,4 +102,80 @@ export function loginUser(req, res) {
             });
         }
         );
+}
+
+
+export async function googleLogin(req, res) {
+    const accussToken = req.body.accessToken;
+
+    //verify token with google
+    //if valid, get user info from google
+    //check if user exists in db
+    //if exists, generate jwt token and send to client
+    //if not exists, create new user in db, generate jwt token and send to client
+
+    //install axios
+    try {
+        const response = await axios.get("https://www.googleapis.com/oauth2/v1/userinfo", {
+            headers: {
+                Authorization: "Bearer " + accussToken
+            }
+        });
+
+        console.log(response);
+        const user = await userModel.findOne({
+            email: response.data.email
+        });
+        if(user === null){
+            const newUser = new userModel({
+                email: response.data.email,
+                firstName: response.data.given_name,
+                lastName: response.data.family_name,
+                isMailVerified: true,
+                password:accussToken
+                //image user.data.picture
+            });
+            await newUser.save();
+            const userData = {
+                        email:response.data.email,
+                        firstName: response.data.given_name,
+                        lastName: response.data.family_name,
+                        rol:"user",
+                        phone:"not Given",
+                        isDisabled: false,
+                        isMailVerified: true
+                    };
+                    const token = jwt.sign(userData, process.env.JWT_KEY, { expiresIn: '1h' });
+                    res.json({
+                        message: "Login successful",
+                        token: token,
+                        user: userData
+                    });
+        }
+        else{
+            const userData = {
+                        email: user.email,
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        phone: user.phone,
+                        rol: user.rol,
+                        isDisabled: user.isDisabled,
+                        isMailVerified: user.isMailVerified
+                    };
+
+                    const token = jwt.sign(userData, process.env.JWT_KEY);
+
+                    res.json({
+                        message: "Login successful",
+                        token: token,
+                        user: userData
+                    });
+        }
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Google login failed",
+            error: error.message
+        });
+    }
 }
