@@ -207,7 +207,7 @@ export function sendOtp(req, res) {
     const email = req.body.email;
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const message  ={
-        from: process.env.EMAIL,
+        from: "dishnadinupriya@gmail.com",
         to: email,
         subject: "OTP Verification",
         text: `Your OTP is : ${otp}`
