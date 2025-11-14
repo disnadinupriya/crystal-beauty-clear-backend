@@ -4,8 +4,22 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import axios from "axios";
 import userModel from "../models/user.js";
+import nodemailer from "nodemailer";
+import otpModel from "../models/otp.js";
 
 dotenv.config();
+
+const transport = nodemailer.createTransport({
+    service: 'Gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: {
+        user: "dishnadinupriya@gmail.com",
+        /*user: process.env.EMAIL_USER,process.env.EMAIL_USER process.env.EMAIL_PASS*/
+        pass: "mhcd aili icuk twjh",
+    },
+});
 
 export function saveUser(req, res) {
 
@@ -187,4 +201,103 @@ export function getCurrentUser(req, res) {
         return;
     }
     res.json(req.user);
+}
+
+export function sendOtp(req, res) {
+    const email = req.body.email;
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const message  ={
+        from: process.env.EMAIL,
+        to: email,
+        subject: "OTP Verification",
+        text: `Your OTP is : ${otp}`
+    };
+    transport.sendMail(message, (err, info) => {
+        if (err) {
+            res.status(500).json({
+                message: "Error sending OTP",
+                error: err.message
+            });
+        } else {
+            // Save OTP to database after successful send
+            const newOtp = new otpModel({
+                email: email,
+                otp: otp,
+            });
+
+            newOtp.save().then(() => {
+                // use 'info' so it's not an unused variable
+                console.log("OTP sent and saved successfully", info);
+                res.json({
+                    message: "OTP sent and saved successfully",
+                    otp: otp
+                });
+            }).catch((err) => {
+                console.error("Error saving OTP", err);
+                res.status(500).json({
+                    message: "OTP sent but error saving OTP",
+                    error: err.message
+                });
+            });
+        }
+    });
+}
+
+// Assumes these are available in the module:
+// const bcrypt = require('bcrypt');
+// const userModel = require('./models/user');   // your user model
+// const otpModel = require('./models/otp');     // your otp model
+
+export async function changePassword(req, res) {
+  const { email, newPassword, otp } = req.body;
+
+  if (!email || !newPassword || !otp) {
+    return res.status(400).json({ message: 'email, newPassword and otp are required' });
+  }
+
+  try {
+    // Get the most recent OTP for this email (sort by createdAt descending)
+    const lastOtpData = await otpModel.findOne({ email }).sort({ createdAt: -1 });
+
+    if (!lastOtpData) {
+      return res.status(400).json({ message: 'Invalid or expired OTP' });
+    }
+
+    // Optional: check OTP age (example: 10 minutes)
+    const OTP_TTL_MS = 10 * 60 * 1000;
+    const ageMs = Date.now() - new Date(lastOtpData.createdAt).getTime();
+    if (ageMs > OTP_TTL_MS) {
+      // remove old OTPs and treat as expired
+      await otpModel.deleteMany({ email });
+      return res.status(400).json({ message: 'OTP expired' });
+    }
+
+    // Compare OTP values (coerce to strings to avoid type mismatch)
+    if (String(lastOtpData.otp) !== String(otp)) {
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
+
+    // Hash new password (use async version to avoid blocking)
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    const updateResult = await userModel.updateOne(
+      { email },
+      { $set: { password: hashedPassword } }
+    );
+
+    // Remove OTP records for this email
+    await otpModel.deleteMany({ email });
+
+    if (updateResult.matchedCount === 0 && updateResult.modifiedCount === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    return res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Error changing password:', error);
+    return res.status(500).json({
+      message: 'Error changing password',
+      error: error.message,
+    });
+  }
 }

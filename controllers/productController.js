@@ -104,3 +104,31 @@ export function updateProduct(req, res) {
             res.status(500).json({ message: "Error updating product", error: err.message });
         });
 }
+
+
+export async function searchProduct(req, res) {
+    const query = req.query.q;
+
+    if (!query || String(query).trim().length === 0) {
+        return res.json([]); 
+    }
+
+    try {
+        const products = await productModel.find({
+            $or: [
+                { name: { $regex: query, $options: 'i' } },
+                { altName: { $elemMatch: { $regex: query, $options: 'i' } }},
+                { description: { $regex: query, $options: 'i' } }
+            ]
+        });
+
+        res.json(products);
+
+    } catch (err) {
+        console.error('Error searching products:', err);
+        res.status(500).json({
+            message: "Error searching products",
+            error: err.message
+        });
+    }
+}
