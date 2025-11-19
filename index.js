@@ -16,6 +16,9 @@ import cors from 'cors';
 import orderRouter from './routes/orderRouter.js';
 import orderModel from './models/order.js';
 
+import reviewRouter from './routes/reviewssRouter.js';
+import reviewModel from './models/reviews.js';
+
 
 
 
@@ -54,6 +57,8 @@ app.use('/api/user', userRouter);
 app.use('/api/product', productRouter);
 
 app.use("/api/order", orderRouter);
+
+app.use("/api/review", reviewRouter);
 
 
 
