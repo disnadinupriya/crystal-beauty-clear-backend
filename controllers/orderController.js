@@ -47,8 +47,12 @@ export async function createOrder(req, res) {
         price: Number*/
       // safely extract first image even if Image is nested arrays
       let firstImage;
-      if (Array.isArray(product.Image)) {
-        if (Array.isArray(product.Image[0])) {
+      /* Image: {
+        type: [Array],
+        default: ["https://www.bing.com/images/search?view=detailV2&ccid=9QX9QucO&id=C61ECB3D755DE23BAF2B0969446739601528DA36&thid=OIP.9QX9QucOeYTqNZYOWx89BwHaE8&mediaurl=https%3a%2f%2fcdn.logojoy.com%2fwp-content%2fuploads%2f20191023114758%2fAdobeStock_224061283-min.jpeg&cdnurl=https%3a%2f%2fth.bing.com%2fth%2fid%2fR.f505fd42e70e7984ea35960e5b1f3d07%3frik%3dNtooFWA5Z0RpCQ%26pid%3dImgRaw%26r%3d0&exph=4000&expw=6000&q=biuty+product&simid=608029450280660048&FORM=IRPRST&ck=0B794AC492A12FF6DAB43F62E9F419E5&selectedIndex=0&itb=0"]
+    },*/
+      if (Array.isArray(product.Image) && product.Image.length > 0) {
+        if (Array.isArray(product.Image[0]) && product.Image[0].length > 0) {
           firstImage = product.Image[0][0];
         } else {
           firstImage = product.Image[0];
@@ -56,15 +60,14 @@ export async function createOrder(req, res) {
       } else {
         firstImage = product.Image;
       }
-
-      orderData.billItems[i] = {
-            productid: product.productid,
-            ProductName: product.name,
-            Image: firstImage,
-            quantity: body.billItems[i].quantity,
-            price: product.price
-      };
-      orderData.total = orderData.total + product.price * body.billItems[i].quantity;
+      orderData.billItems.push({
+        productId: product.productid,
+        ProductName: product.name,
+        Image: firstImage,
+        quantity: body.billItems[i].quantity,
+        price: product.price,
+      });
+      orderData.total += body.billItems[i].quantity * product.price;
   }
   const order = new orderModel(orderData);
   
@@ -103,7 +106,9 @@ export function getOrders(req, res) {
   }
   if(req.user.rol=="admin") {
     orderModel.find().then((orders) => {
-      res.json(orders);
+      // normalize orders so frontend can read `order.products` with image(s)
+      const normalized = orders.map((o) => normalizeOrderForFrontend(o));
+      res.json(normalized);
     }).catch((err) => {
       console.error("Error getting orders:", err);
       res.status(500).json({ message: "Error getting orders", error: err.message });
@@ -113,12 +118,40 @@ export function getOrders(req, res) {
     orderModel.find({
       email: req.user.email
     }).then((orders) => {
-      res.json(orders);
+      const normalized = orders.map((o) => normalizeOrderForFrontend(o));
+      res.json(normalized);
     }).catch((err) => {
       console.error("Error getting orders:", err);
       res.status(500).json({ message: "Error getting orders", error: err.message });
     })
   }
+}
+
+// helper: convert order.billItems -> order.products with image/images fields
+function normalizeOrderForFrontend(orderDoc) {
+  const o = orderDoc.toObject ? orderDoc.toObject() : { ...orderDoc };
+  const billItems = Array.isArray(o.billItems) ? o.billItems : [];
+  const products = billItems.map((it) => {
+    // Image may be a string, array, or nested array. Normalize to images[] and image (first)
+    let images = [];
+    if (it && it.Image != null) {
+      if (Array.isArray(it.Image)) {
+        // flatten nested arrays
+        images = it.Image.flat(Infinity).filter(Boolean);
+      } else if (typeof it.Image === 'string') {
+        images = [it.Image];
+      }
+    }
+    return {
+      productId: it.productId ?? it.productid ?? null,
+      name: it.ProductName ?? it.name ?? null,
+      price: it.price ?? null,
+      quantity: it.quantity ?? null,
+      image: images[0] ?? null,
+      images: images,
+    };
+  });
+  return { ...o, products };
 }
 
 // updateOrder handler (server-side)

@@ -1,4 +1,4 @@
-import user from "../models/user.js";
+// use a single import name for the User model
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
@@ -15,9 +15,8 @@ const transport = nodemailer.createTransport({
     port: 587,
     secure: false,
     auth: {
-        user: "dishnadinupriya@gmail.com",
-        /*user: process.env.EMAIL_USER,process.env.EMAIL_USER process.env.EMAIL_PASS*/
-        pass: "mhcd aili icuk twjh",
+        user: process.env.EMAIL_USER || "dishnadinupriya@gmail.com",
+        pass: process.env.EMAIL_PASS || "mhcd aili icuk twjh",
     },
 });
 
@@ -36,7 +35,7 @@ export function saveUser(req, res) {
 
     const hashedPassword = bcrypt.hashSync(req.body.password, 8)
     // console.log(hashedPassword);
-    const newUser = new user({
+    const newUser = new userModel({
         email: req.body.email,
         firstName: req.body.firstName,
         lastName: req.body.lastName,
@@ -64,7 +63,7 @@ export function loginUser(req, res) {
     const email = req.body.email;
     const password = req.body.password;
 
-    user.findOne({ email: email })
+    userModel.findOne({ email: email })
         .then((user) => {
             if (user == null) {
                 res.status(404).json({
@@ -300,4 +299,77 @@ export async function changePassword(req, res) {
       error: error.message,
     });
   }
+}
+
+// controllers/userController.js
+
+export function getUsers(req, res) {
+    // Admin කෙනෙක්ද කියලා check කිරීම (ආරක්ෂාවට)
+    if (!req.user || (req.user.rol !== "admin" && req.user.role !== "admin")) {
+        return res.status(403).json({ message: "Access denied. Admins only." });
+    }
+
+    userModel.find()
+        .then((users) => {
+            res.json(users);
+        })
+        .catch((error) => {
+            console.error("Error fetching users:", error);
+            res.status(500).json({ 
+                message: "Error fetching users", 
+                error: error.message 
+            });
+        });
+}
+
+// controllers/userController.js
+
+// ... (අනිත් functions වලට පස්සේ මේක එකතු කරන්න)
+
+export async function updateUser(req, res) {
+    // Admin කෙනෙක්ද කියලා check කිරීම
+    if (!req.user || (req.user.rol !== "admin" && req.user.role !== "admin")) {
+        return res.status(403).json({ message: "Access denied. Admins only." });
+    }
+
+    const userId = req.params.id;
+    const updates = req.body; // { rol: "admin", isDisabled: true, etc. }
+
+    try {
+        const updatedUser = await userModel.findByIdAndUpdate(userId, updates, { new: true });
+        
+        if (!updatedUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.json({ message: "User updated successfully", user: updatedUser });
+    } catch (error) {
+        console.error("Error updating user:", error);
+        res.status(500).json({ message: "Failed to update user", error: error.message });
+    }
+}
+// controllers/userController.js
+
+// ... keep all your existing functions ...
+
+export async function deleteUser(req, res) {
+    // 1. Security Check: Ensure only admins can delete
+    if (!req.user || (req.user.rol !== "admin" && req.user.role !== "admin")) {
+        return res.status(403).json({ message: "Access denied. Admins only." });
+    }
+
+    const userId = req.params.id;
+
+    try {
+        const deletedUser = await userModel.findByIdAndDelete(userId);
+
+        if (!deletedUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.json({ message: "User deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting user:", error);
+        res.status(500).json({ message: "Failed to delete user", error: error.message });
+    }
 }
