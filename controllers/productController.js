@@ -67,11 +67,19 @@ export function deleteProduct(req, res) {
         res.status(403).json({ message: "You are not authorized to delete a product" });
         return;
     }
-    productModel.findOneAndDelete(req.params.id).then(
-        () => {
+
+    // --- THE FIX IS HERE ---
+    // We must pass an object: { productid: req.params.id }
+    // This ensures we delete the specific product with that ID, not just the first one found.
+    productModel.findOneAndDelete({ productid: req.params.id }).then(
+        (deletedProduct) => {
+            // Ideally, check if a product was actually found and deleted
+            if (!deletedProduct) {
+                res.status(404).json({ message: "Product not found" });
+                return;
+            }
             res.json({
                 message: "Product deleted successfully"
-                
             });
         }
     ).catch((err) => {

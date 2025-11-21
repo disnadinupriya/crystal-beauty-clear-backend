@@ -183,3 +183,29 @@ export async function updateOrder(req, res) {
     return res.status(500).json({ message: "Error updating order", error: error.message });
   }
 }
+
+//DELETE Order Handler
+export async function deleteOrder(req, res) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "You need to login first" });
+    }
+    if (req.user.rol !== "admin") {
+      return res.status(403).json({ message: "You are not authorized to delete an order" });
+    }
+
+    const orderId = req.params.orderId; 
+
+    // Find and Delete by the custom orderId field (e.g., ORD0001)
+    const result = await orderModel.findOneAndDelete({ orderId: orderId });
+
+    if (!result) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    return res.json({ message: "Order deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting order:", error);
+    return res.status(500).json({ message: "Error deleting order", error: error.message });
+  }
+}

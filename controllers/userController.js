@@ -20,6 +20,7 @@ const transport = nodemailer.createTransport({
     },
 });
 
+
 export function saveUser(req, res) {
 
     if (req.body.rol == 'admin') {
@@ -202,46 +203,53 @@ export function getCurrentUser(req, res) {
     res.json(req.user);
 }
 
+// 1. CONFIGURE EMAIL TRANSPORTER
+
+
 export function sendOtp(req, res) {
-    const email = req.body.email;
+    const { email } = req.body;
+
+    // Generate 6 digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const message  ={
+
+    const message = {
         from: "dishnadinupriya@gmail.com",
         to: email,
-        subject: "OTP Verification",
-        text: `Your OTP is : ${otp}`
+        subject: "Password Reset OTP",
+        // HTML is prettier than plain text
+        html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px;">
+                <h2>OTP Verification</h2>
+                <p>Your One-Time Password to reset your password is:</p>
+                <h1 style="color: #4F46E5; letter-spacing: 5px;">${otp}</h1>
+                <p>This code expires in 10 minutes.</p>
+            </div>
+        `
     };
+
     transport.sendMail(message, (err, info) => {
         if (err) {
-            res.status(500).json({
-                message: "Error sending OTP",
-                error: err.message
+            console.error("Nodemailer Error:", err);
+            // Return 500 so frontend knows it failed
+            return res.status(500).json({ 
+                message: "Error sending OTP", 
+                error: err.message 
             });
         } else {
-            // Save OTP to database after successful send
-            const newOtp = new otpModel({
-                email: email,
-                otp: otp,
-            });
-
-            newOtp.save().then(() => {
-                // use 'info' so it's not an unused variable
-                console.log("OTP sent and saved successfully", info);
-                res.json({
-                    message: "OTP sent and saved successfully",
-                    otp: otp
+            // Save to DB
+            const newOtp = new otpModel({ email, otp });
+            newOtp.save()
+                .then(() => {
+                    res.json({ message: "OTP sent successfully" });
+                })
+                .catch((dbErr) => {
+                    res.status(500).json({ message: "Error saving OTP", error: dbErr.message });
                 });
-            }).catch((err) => {
-                console.error("Error saving OTP", err);
-                res.status(500).json({
-                    message: "OTP sent but error saving OTP",
-                    error: err.message
-                });
-            });
         }
     });
 }
 
+// ... keep your changePassword function as is ...
 // Assumes these are available in the module:
 // const bcrypt = require('bcrypt');
 // const userModel = require('./models/user');   // your user model
