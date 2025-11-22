@@ -1,6 +1,4 @@
-// routes/userRouter.js
 import express from 'express';
-// 1. Import deleteUser here 👇
 import { 
     loginUser, 
     saveUser, 
@@ -15,14 +13,13 @@ import {
 
 const userRouter = express.Router();
 
-userRouter.get('/', getUsers);
-userRouter.post('/', saveUser);
-userRouter.put('/:id', updateUser);
+// --- CRUD Routes ---
+userRouter.get('/', getUsers);            // Get all users
+userRouter.post('/', saveUser);           // Create/Register user
+userRouter.put('/:id', updateUser);       // Update user
+userRouter.delete('/:id', deleteUser);    // Delete user (Fixed: Added this line)
 
-// 2. Add this DELETE route 👇
-userRouter.delete('/:id', deleteUser); 
-
-// ... keep existing routes
+// --- Auth & Utility Routes ---
 userRouter.post('/login', loginUser);
 userRouter.post('/google', googleLogin);
 userRouter.get('/current', getCurrentUser);
